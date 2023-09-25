@@ -111,7 +111,7 @@ const ChartInfo = ({
   </Box>
 );
 
-export const Home = () => {
+const Home = () => {
   const [spread, setSpread] = useState<number>(5);
   const [dataset, setDataset] = useState<string>("2021 NBI Data");
 

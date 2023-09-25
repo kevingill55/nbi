@@ -17,8 +17,8 @@ export type RawBridge = {
   YEAR_BUILT_027: number;
   STRUCTURE_NUMBER_008: string;
   LOCATION_009: string;
-  SUPERSTRUCTURE_COND_059: number | string;
-  DECK_COND_058: number | string;
+  SUPERSTRUCTURE_COND_059: number;
+  DECK_COND_058: number;
   BRIDGE_CONDITION: string;
   /**
    * STRUCTURE KIND GUIDE
