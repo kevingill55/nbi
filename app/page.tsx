@@ -1,95 +1,234 @@
-import Image from 'next/image'
-import styles from './page.module.css'
+"use client";
+import React, { useMemo, useState } from "react";
+import Box from "@mui/material/Box";
+import TextField from "@mui/material/TextField";
+import Card from "@mui/material/Card";
+import InputLabel from "@mui/material/InputLabel";
+import MenuItem from "@mui/material/MenuItem";
+import FormControl from "@mui/material/FormControl";
+import Select, { SelectChangeEvent } from "@mui/material/Select";
+import Typography from "@mui/material/Typography";
+import { createTheme } from "@mui/material/styles";
+import { green, blue } from "@mui/material/colors";
+import { ThemeProvider } from "@emotion/react";
 
-export default function Home() {
+import { BarComponent } from "./components";
+import {
+  findAdjacentPrestressedConcreteBridges,
+  assignBridgesToSpread,
+  getChartData,
+} from "./utils";
+import { RawBridge } from "./models";
+import data from "./data.json";
+
+const theme = createTheme({
+  palette: {
+    primary: {
+      main: blue[400],
+    },
+    secondary: {
+      main: green[300],
+    },
+  },
+});
+
+const InvalidSpreadMessage = () => (
+  <Box
+    sx={{
+      display: "flex",
+      height: "750px",
+      width: "100%",
+      flexDirection: "column",
+      justifyContent: "center",
+      alignItems: "center",
+      gap: "6px",
+    }}
+  >
+    <Typography variant="h2" fontWeight={600} fontSize="18px">
+      Please provide a valid value for the spread
+    </Typography>
+    <Typography variant="h2" fontSize="16px">
+      The value of the spread must be greater than zero and less than the
+      difference between the min and max year
+    </Typography>
+  </Box>
+);
+
+const ChartInfo = ({
+  minYear,
+  maxYear,
+  bridgeLen,
+}: {
+  minYear: number;
+  maxYear: number;
+  bridgeLen: number;
+}) => (
+  <Box sx={{ width: "25%" }}>
+    <Box
+      sx={{
+        display: "flex",
+        justifyContent: "space-between",
+      }}
+    >
+      <Typography
+        fontWeight={500}
+        variant="h2"
+        textAlign="right"
+        fontSize="16px"
+      >
+        Min year
+      </Typography>
+      <Typography variant="h2" fontSize="16px">
+        {minYear}
+      </Typography>
+    </Box>
+    <Box
+      sx={{
+        display: "flex",
+        justifyContent: "space-between",
+      }}
+    >
+      <Typography fontWeight={500} variant="h2" fontSize="16px">
+        Max year
+      </Typography>
+      <Typography variant="h2" fontSize="16px">
+        {maxYear}
+      </Typography>
+    </Box>
+    <Box
+      sx={{
+        display: "flex",
+        justifyContent: "space-between",
+      }}
+    >
+      <Typography fontWeight={500} variant="h2" fontSize="16px">
+        Number of bridges
+      </Typography>
+      <Typography variant="h2" fontSize="16px">
+        {bridgeLen}
+      </Typography>
+    </Box>
+  </Box>
+);
+
+export const Home = () => {
+  const [spread, setSpread] = useState<number>(5);
+  const [dataset, setDataset] = useState<string>("2021 NBI Data");
+
+  const {
+    minYear,
+    maxYear,
+    bridges: validBridges,
+    bridgeYearMap,
+  } = useMemo(
+    () => findAdjacentPrestressedConcreteBridges(data as RawBridge[]),
+    [],
+  );
+
+  const bridgeRangeMap: Map<number, RawBridge[]> = useMemo(
+    () => assignBridgesToSpread(minYear, maxYear, spread, bridgeYearMap),
+    [spread, minYear, maxYear, bridgeYearMap],
+  );
+
+  const { labels, values3, values4, values5, values6, values7 } = useMemo(
+    () => getChartData(maxYear, spread, bridgeRangeMap),
+    [maxYear, spread, bridgeRangeMap],
+  );
+
   return (
-    <main className={styles.main}>
-      <div className={styles.description}>
-        <p>
-          Get started by editing&nbsp;
-          <code className={styles.code}>app/page.tsx</code>
-        </p>
-        <div>
-          <a
-            href="https://vercel.com?utm_source=create-next-app&utm_medium=appdir-template&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
+    <ThemeProvider theme={theme}>
+      <Box
+        sx={{
+          display: "flex",
+          flexDirection: "column",
+          alignItems: "center",
+          padding: 8,
+          height: "100vh",
+          backgroundColor: "#f7f7f7",
+        }}
+      >
+        <Card
+          raised
+          sx={{
+            width: "65%",
+            borderRadius: "10px",
+            padding: 2,
+          }}
+        >
+          <Typography fontSize="18px" textAlign="left" variant="h2">
+            MassDot Adjacent Prestressed Concrete Beam Bridges By Year Built and
+            % Condition
+          </Typography>
+          <div
+            style={{
+              borderBottom: "1px solid #f5f6f7",
+              width: "100%",
+            }}
+          />
+          <Box
+            sx={{
+              display: "flex",
+              padding: "20px 0",
+              justifyContent: "space-between",
+            }}
           >
-            By{' '}
-            <Image
-              src="/vercel.svg"
-              alt="Vercel Logo"
-              className={styles.vercelLogo}
-              width={100}
-              height={24}
-              priority
+            <Box
+              sx={{
+                display: "flex",
+                flexDirection: "column",
+                gap: "12px",
+                width: "40%",
+              }}
+            >
+              <FormControl>
+                <InputLabel id="dataset-nbi-label">Dataset</InputLabel>
+                <Select
+                  labelId="dataset-nbi-label"
+                  id="dataset-nbi-id"
+                  value={dataset}
+                  disabled
+                  label="Dataset"
+                  onChange={(e: SelectChangeEvent) => {
+                    setDataset(e.target.value);
+                  }}
+                >
+                  <MenuItem value="2021 NBI Data">2021 NBI Data</MenuItem>
+                </Select>
+              </FormControl>
+              <TextField
+                label="Year spread"
+                id="year-spread"
+                helperText="Provide a value for the year grouping (5 year spread: 2010-2014, 2015-2019, etc)"
+                onChange={(e) => {
+                  const num = Number(e.target.value);
+                  if (!Number.isNaN(num)) setSpread(num);
+                }}
+                value={spread}
+                size="small"
+              />
+            </Box>
+            <ChartInfo
+              bridgeLen={validBridges.length}
+              minYear={minYear}
+              maxYear={maxYear}
             />
-          </a>
-        </div>
-      </div>
+          </Box>
+          {spread === 0 || spread > maxYear - minYear ? (
+            <InvalidSpreadMessage />
+          ) : (
+            <BarComponent
+              labels={labels}
+              values3={values3}
+              values4={values4}
+              values5={values5}
+              values6={values6}
+              values7={values7}
+            />
+          )}
+        </Card>
+      </Box>
+    </ThemeProvider>
+  );
+};
 
-      <div className={styles.center}>
-        <Image
-          className={styles.logo}
-          src="/next.svg"
-          alt="Next.js Logo"
-          width={180}
-          height={37}
-          priority
-        />
-      </div>
-
-      <div className={styles.grid}>
-        <a
-          href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template&utm_campaign=create-next-app"
-          className={styles.card}
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <h2>
-            Docs <span>-&gt;</span>
-          </h2>
-          <p>Find in-depth information about Next.js features and API.</p>
-        </a>
-
-        <a
-          href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template&utm_campaign=create-next-app"
-          className={styles.card}
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <h2>
-            Learn <span>-&gt;</span>
-          </h2>
-          <p>Learn about Next.js in an interactive course with&nbsp;quizzes!</p>
-        </a>
-
-        <a
-          href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template&utm_campaign=create-next-app"
-          className={styles.card}
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <h2>
-            Templates <span>-&gt;</span>
-          </h2>
-          <p>Explore the Next.js 13 playground.</p>
-        </a>
-
-        <a
-          href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template&utm_campaign=create-next-app"
-          className={styles.card}
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <h2>
-            Deploy <span>-&gt;</span>
-          </h2>
-          <p>
-            Instantly deploy your Next.js site to a shareable URL with Vercel.
-          </p>
-        </a>
-      </div>
-    </main>
-  )
-}
+export default Home;
